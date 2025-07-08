@@ -81,31 +81,15 @@ def parse_pred_ans(pred_ans):
 
     return flag_choice  # which one is better
 
-# customized envs
-from openai import AzureOpenAI
 
-CUSTOMIZED_EVAL_MODEL=os.getenv("EVAL_MODEL", "gpt-4o")
-API_VERSION = os.getenv("AZURE_API_VERSION", "2023-05-15")
-client = AzureOpenAI(
-    azure_endpoint=API_URL,
-    api_key=API_KEY,
-    api_version=API_VERSION,
-)
-
-def parse_by_llm(response, model=CUSTOMIZED_EVAL_MODEL, max_tokens=32):
-    messages = [
-        {"role": "user", "content": LLM_PARSE_ANSWER_PROMPT.format(judgement=response)},
-    ]
-
-    response = client.chat.completions.create(
-        model=CUSTOMIZED_EVAL_MODEL,
-        messages=messages,
-        temperature=0.0,
-        top_p=1.0,
-        presence_penalty=1,
-        max_tokens=max_tokens,
-    )
-    return response.choices[0].message.content.strip()
+def parse_by_llm(response, model="gpt-4o-mini", max_tokens=32):
+    # get the judgement from response using gpt-4o
+    data = {"max_tokens": max_tokens, "model": model, "temperature": 0.0, "top_p": 1.0, "presence_penalty": 1, "messages": [{"role": "user", "content": LLM_PARSE_ANSWER_PROMPT.format(judgement=response)}]}
+    response = requests.post(API_URL, headers=headers, data=json.dumps(data).encode("utf-8"))
+    result = response.content.decode("utf-8")
+    dict_result = json.loads(result)
+    llm_output = dict_result["choices"][0]["message"]["content"].strip()
+    return llm_output
 
 
 def vlrewardbench_process_results(doc, results):

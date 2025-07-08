@@ -256,6 +256,10 @@ class TaskManager:
                     # very scuffed: set task name here. TODO: fixme?
                     task_object.config.task = config["task"]
             else:
+                try:
+                    config['dataset_kwargs']['token'] = False
+                except:
+                    pass
                 task_object = ConfigurableTask(config=config, model_name=self.model_name)
 
             return {task: task_object}

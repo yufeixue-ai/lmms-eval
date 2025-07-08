@@ -48,36 +48,41 @@ Can you explain this meme? | This meme is poking fun at the fact that the names 
 """
 
 
-# customized envs
-from openai import AzureOpenAI
-
-CUSTOMIZED_EVAL_MODEL=os.getenv("EVAL_MODEL", "gpt-4o")
-API_VERSION = os.getenv("AZURE_API_VERSION", "2023-05-15")
-client = AzureOpenAI(
-    azure_endpoint=API_URL,
-    api_key=API_KEY,
-    api_version=API_VERSION,
-)
-
 def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, temperature=0.0, max_tokens=128, patience=3, sleep_time=5):
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
 
     messages = [
         {"role": "user", "content": prompt},
     ]
-    
+
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+
+    if API_TYPE == "azure":
+        payload.pop("model")
+
     while patience > 0:
         patience -= 1
         try:
-            response = client.chat.completions.create(
-                model=CUSTOMIZED_EVAL_MODEL,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
+            response = requests.post(
+                API_URL,
+                headers=headers,
+                json=payload,
+                timeout=60,
             )
+            response.raise_for_status()
+            response_data = response.json()
 
-            content = response.choices[0].message.content.strip()
+            content = response_data["choices"][0]["message"]["content"].strip()
             if content != "":
-                return content, response.model
+                return content, response_data["model"]
 
         except Exception as e:
             eval_logger.error(f"Error: {e}")
